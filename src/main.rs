@@ -43,9 +43,9 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn find_connected_gamepad(grilrs: &Gilrs) -> Option<&Gamepad> {
-    for idx in 0..grilrs.last_gamepad_hint() {
-        if let Some(gamepad) = grilrs.gamepad(idx) {
+fn find_connected_gamepad(gilrs: &Gilrs) -> Option<&Gamepad> {
+    for idx in 0..gilrs.last_gamepad_hint() {
+        if let Some(gamepad) = gilrs.gamepad(idx) {
             if gamepad.is_connected() {
                 return Some(gamepad)
             }
