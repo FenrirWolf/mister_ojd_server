@@ -1,6 +1,6 @@
 # mister_ojd_server
 
-This is a WIP server for [Open Joystick Display](http://kernelzechs.com/open-joystick-display/) for use with the [MiSTer FPGA platform](https://github.com/MiSTer-devel/Main_MiSTer/wiki). It is currently in a heavily incomplete state.
+This is a WIP server for [Open Joystick Display](http://kernelzechs.com/open-joystick-display/) for use with the [MiSTer FPGA platform](https://github.com/MiSTer-devel/Main_MiSTer/wiki). Once complete, the server will allow you view gamepad inputs from USB controllers on the MiSTer via Open Joystick Display's visual overlays. It is currently in a heavily incomplete state.
 
 ## roadmap
 * Flesh out the input-handling logic. Input handling is currently based on [gilrs_core](https://crates.io/crates/gilrs-core), which should allow quick prototyping on desktop operating systems as well as on the MiSTer itself.
