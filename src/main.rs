@@ -58,37 +58,5 @@ fn find_connected_gamepad(gilrs: &Gilrs) -> Option<&Gamepad> {
 }
 
 fn build_json_payload(gamepad: &Gamepad) -> String {
-    let axes = gamepad.axes();
-    let buttons = gamepad.buttons();
-
-    println!("{:?}", axes);
-    println!("{:?}", buttons);
-
-    let axes_json: Vec<Value> = axes.iter()
-        .map(|ev_code| ev_code.into_u32())
-        .map(|raw| raw as f64 / u16::MAX as f64)
-        .map(|n| Value::Number(Number::from_f64(n).unwrap_or(0.into())))
-        .collect();
-
-    let buttons_json: Vec<Map<String, Value>> = buttons.iter()
-        .map(|ev_code| ev_code.into_u32())
-        .map(|n| {
-            let mut map = Map::new();
-            map.insert(String::from("pressed"), (n > 0).into());
-            map.insert(String::from("value"), (if n > 0 {1} else {0}).into());
-            map
-        })
-        .collect();
-
-    let payload = json!({
-        "axes": axes_json,
-        "buttons": buttons_json,
-        "connected": true,
-        "id": gamepad.name(),
-        "index": 0,
-        "mapping": "",
-        "timestamp": 0,
-    });
-
-    payload.to_string()
+    todo!()
 }
