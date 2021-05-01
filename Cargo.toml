@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-gilrs-core = "0.3"
 local_ipaddress = "0.1"
+nix = "0.20"
 serde_json = "1.0"
