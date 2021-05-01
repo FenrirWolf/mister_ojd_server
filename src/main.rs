@@ -6,13 +6,13 @@ use std::{
     net::TcpListener
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result};
 use serde_json::{json, Map, Number, Value};
 
-struct GamepadInfo {
-    axes: u8,
-    buttons: u8,
+struct Gamepad {
     name: String,
+    buttons: Vec<bool>,
+    axes: Vec<f64>,
 }
 
 #[repr(C)]
@@ -50,12 +50,13 @@ fn main() -> Result<()> {
 
     let mut recv_buf = [0u8; 26];
 
-    loop {
-        println!("Reading...");
-        if stream.read(&mut recv_buf)? > 0 {
-            println!("Writing...");
-            // todo
+    let mut gamepad = get_gamepad_info()?;
 
+    loop {
+        if stream.read(&mut recv_buf)? > 0 {
+            read_gamepad_events(&mut gamepad)?;
+            let payload = build_json_payload(&mut gamepad);
+            write!(&mut stream, "{}#{}", payload.len(), payload)?;
         } else {
             println!("No bytes from the server! Quitting...");
             break;
@@ -65,7 +66,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_gamepad_info() -> Result<GamepadInfo> {
+fn get_gamepad_info() -> Result<Gamepad> {
     let mut num_axes: u8 = 0;
     let mut num_buttons: u8 = 0;
     let mut gamepad_name = [0u8; 128];
@@ -89,9 +90,58 @@ fn get_gamepad_info() -> Result<GamepadInfo> {
         .into();
     
     Ok(
-        GamepadInfo {
-        axes: num_axes,
-        buttons: num_buttons,
+        Gamepad {
         name: parsed_name,
+        buttons: vec![false; num_buttons as usize],
+        axes: vec![0f64; num_axes as usize],
     })
+}
+
+fn read_gamepad_events(gamepad: &mut Gamepad) -> Result<()> {
+    let mut raw = [0u8; 8];
+
+    let mut file = File::open("/dev/input/js0").context("No gamepad detected")?;
+
+    for button in &mut gamepad.buttons {
+        file.read(&mut raw).context("Couldn't read js_event")?;
+        let event: JsEvent = unsafe { std::mem::transmute(raw) };
+        *button = event.value != 0;
+    }
+
+    for axis in &mut gamepad.axes {
+        file.read(&mut raw).context("Couldn't read js_event")?;
+        let event: JsEvent = unsafe { std::mem::transmute(raw) };
+        *axis = event.value as f64 / i16::MAX as f64;
+    }
+
+    Ok(())
+}
+
+fn build_json_payload(gamepad: &Gamepad) -> String {
+    let axes_json: Vec<Value> = gamepad.axes.iter()
+        .map(|&val| Value::Number(Number::from_f64(val).unwrap_or(0.into())))
+        .collect();
+
+    let buttons_json: Vec<Map<String, Value>> = gamepad.buttons.iter()
+        .map(|&val| {
+            let mut map = Map::new();
+            map.insert(String::from("pressed"), val.into());
+            map.insert(String::from("value"), val.into());
+            map
+        })
+        .collect();
+
+        let payload = json!(
+            {
+                "axes": axes_json,
+                "buttons": buttons_json,
+                "connected": true,
+                "id": gamepad.name,
+                "index": 0,
+                "mapping": "",
+                "timestamp": 0,
+            }
+        );
+
+        payload.to_string()
 }
