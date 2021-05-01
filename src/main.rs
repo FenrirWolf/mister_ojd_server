@@ -70,7 +70,7 @@ fn get_gamepad_info() -> Result<GamepadInfo> {
     let mut num_buttons: u8 = 0;
     let mut gamepad_name = [0u8; 128];
 
-    let file = File::open("/dev/input/js0").context("No controller detected")?;
+    let file = File::open("/dev/input/js0").context("No gamepad detected")?;
     let fd = file.as_raw_fd();
 
     unsafe {
@@ -83,7 +83,8 @@ fn get_gamepad_info() -> Result<GamepadInfo> {
         .position(|&ch| ch == b'\0')
         .context("Gamepad name isn't nul-terminated somehow???")? + 1;
 
-    let parsed_name: String = CStr::from_bytes_with_nul(&gamepad_name[..name_len])?
+    let parsed_name: String = CStr::from_bytes_with_nul(&gamepad_name[..name_len])
+        .context("Failed to parse gamepad name")?
         .to_string_lossy()
         .into();
     
