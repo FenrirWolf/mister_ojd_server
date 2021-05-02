@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use serde_json::{json, Map, Number, Value};
+use serde_json::{json, Value};
 
 struct Gamepad {
     name: String,
@@ -119,22 +119,15 @@ fn read_gamepad_events(gamepad: &mut Gamepad) -> Result<()> {
 }
 
 fn build_json_payload(gamepad: &Gamepad) -> String {
-    let axes_json: Vec<Value> = gamepad.axes.iter()
-        .map(|&val| Value::Number(Number::from_f64(val).unwrap_or(0.into())))
-        .collect();
-
-    let buttons_json: Vec<Map<String, Value>> = gamepad.buttons.iter()
+    let buttons_json: Vec<Value> = gamepad.buttons.iter()
         .map(|&val| {
-            let mut map = Map::new();
-            map.insert(String::from("pressed"), val.into());
-            map.insert(String::from("value"), val.into());
-            map
+            json!({"pressed": val, "value": if val {1} else {0}})
         })
         .collect();
 
     let payload = json!(
         {
-            "axes": axes_json,
+            "axes": gamepad.axes,
             "buttons": buttons_json,
             "connected": true,
             "id": gamepad.name,
