@@ -1,3 +1,6 @@
+use anyhow::{Context, Result};
+use serde_json::{json, Value};
+
 use std::{
     ffi::CStr,
     fs::File,
@@ -5,9 +8,6 @@ use std::{
     io::prelude::*,
     net::{TcpListener, TcpStream},
 };
-
-use anyhow::{Context, Result};
-use serde_json::{json, Value};
 
 struct Gamepad {
     name: String,
@@ -90,8 +90,7 @@ fn get_gamepad_info() -> Result<Gamepad> {
         .to_string_lossy()
         .into();
     
-    Ok(
-        Gamepad {
+    Ok(Gamepad {
         name: parsed_name,
         buttons: vec![false; num_buttons as usize],
         axes: vec![0f64; num_axes as usize],
@@ -99,9 +98,8 @@ fn get_gamepad_info() -> Result<Gamepad> {
 }
 
 fn read_gamepad_events(gamepad: &mut Gamepad) -> Result<()> {
-    let mut raw = [0u8; 8];
-
     let mut file = File::open("/dev/input/js0").context("No gamepad detected")?;
+    let mut raw = [0u8; 8];
 
     for button in &mut gamepad.buttons {
         file.read(&mut raw).context("Couldn't read js_event")?;
