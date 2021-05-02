@@ -3,7 +3,7 @@ use std::{
     fs::File,
     os::unix::io::AsRawFd,
     io::prelude::*,
-    net::TcpListener
+    net::{TcpListener, TcpStream},
 };
 
 use anyhow::{Context, Result};
@@ -16,7 +16,7 @@ struct Gamepad {
 }
 
 #[repr(C)]
-struct JsEvent {
+struct js_event {
     time: u32,
     value: i16,
     kind: u8,
@@ -32,25 +32,12 @@ const JSIOCGNAME: u8 = 0x13;
 // create the ioctl calls that we need to get gamepad metadata
 nix::ioctl_read!(get_num_axes, JSIOCG_MAGIC, JSIOCGAXES, u8);
 nix::ioctl_read!(get_num_buttons, JSIOCG_MAGIC, JSIOCGBUTTONS, u8);
-nix::ioctl_read_buf!(get_controller_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
+nix::ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
 
 fn main() -> Result<()> {
-    let mut ip_addr = local_ipaddress::get().context("Unable to retrieve local IP address")?;
-    ip_addr.push_str(":56709");
-    
-    println!("binding to {}...", ip_addr);
-
-    let listener = TcpListener::bind(ip_addr).context("Unable to bind to local IP address")?;
-
-    println!("accepting...");
-
-    let (mut stream, _) = listener.accept().context("Unable to accept TCP connection")?;
-
-    println!("Connected!");
-
-    let mut recv_buf = [0u8; 26];
-
+    let mut stream = connect_to_ojd()?;
     let mut gamepad = get_gamepad_info()?;
+    let mut recv_buf = [0u8; 26];
 
     loop {
         if stream.read(&mut recv_buf)? > 0 {
@@ -66,6 +53,20 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn connect_to_ojd() -> Result<TcpStream> {
+    let mut ip_addr = local_ipaddress::get().context("Unable to retrieve local IP address")?;
+    ip_addr.push_str(":56709");
+    
+    println!("binding to {}...", ip_addr);
+    let listener = TcpListener::bind(ip_addr).context("Unable to bind to local IP address")?;
+
+    println!("accepting...");
+    let (stream, _) = listener.accept().context("Unable to accept TCP connection")?;
+
+    println!("Connected!");
+    Ok(stream)
+}
+
 fn get_gamepad_info() -> Result<Gamepad> {
     let mut num_axes: u8 = 0;
     let mut num_buttons: u8 = 0;
@@ -77,7 +78,7 @@ fn get_gamepad_info() -> Result<Gamepad> {
     unsafe {
         get_num_axes(fd, &mut num_axes).context("Couldn't get gamepad axes")?;
         get_num_buttons(fd, &mut num_buttons).context("Couldn't get gamepad buttons")?;
-        get_controller_name(fd, &mut gamepad_name).context("Couldn't get gamepad name")?;
+        get_gamepad_name(fd, &mut gamepad_name).context("Couldn't get gamepad name")?;
     }
 
     let name_len = gamepad_name.iter()
@@ -104,13 +105,13 @@ fn read_gamepad_events(gamepad: &mut Gamepad) -> Result<()> {
 
     for button in &mut gamepad.buttons {
         file.read(&mut raw).context("Couldn't read js_event")?;
-        let event: JsEvent = unsafe { std::mem::transmute(raw) };
+        let event: js_event = unsafe { std::mem::transmute(raw) };
         *button = event.value != 0;
     }
 
     for axis in &mut gamepad.axes {
         file.read(&mut raw).context("Couldn't read js_event")?;
-        let event: JsEvent = unsafe { std::mem::transmute(raw) };
+        let event: js_event = unsafe { std::mem::transmute(raw) };
         *axis = event.value as f64 / i16::MAX as f64;
     }
 
@@ -131,17 +132,17 @@ fn build_json_payload(gamepad: &Gamepad) -> String {
         })
         .collect();
 
-        let payload = json!(
-            {
-                "axes": axes_json,
-                "buttons": buttons_json,
-                "connected": true,
-                "id": gamepad.name,
-                "index": 0,
-                "mapping": "",
-                "timestamp": 0,
-            }
-        );
+    let payload = json!(
+        {
+            "axes": axes_json,
+            "buttons": buttons_json,
+            "connected": true,
+            "id": gamepad.name,
+            "index": 0,
+            "mapping": "",
+            "timestamp": 0,
+        }
+    );
 
-        payload.to_string()
+    payload.to_string()
 }
