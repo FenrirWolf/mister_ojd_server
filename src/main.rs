@@ -208,7 +208,7 @@ impl Gamepad {
             {
                 "axes": self.axes,
                 "buttons": buttons_json,
-                "connected": true,
+                "connected": self.is_connected(),
                 "id": self.name,
                 "index": 0,
                 "mapping": "",
