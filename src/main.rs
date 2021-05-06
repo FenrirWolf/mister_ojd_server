@@ -56,7 +56,7 @@ fn main() {
         let mut recv_buf = [0u8; 26];
 
         while let Ok(_) = socket.read(&mut recv_buf) {
-            if !gamepad.is_connected() {
+            if !gamepad.connected {
                 if let Err(e) = gamepad.connect() {
                     println!("Unable to detect gamepad status: {}", e);
                 } else {
@@ -133,10 +133,6 @@ impl Gamepad {
         Ok(())
     }
 
-    fn is_connected(&self) -> bool {
-        self.connected
-    }
-
     fn wait_for_connection(&mut self) -> Result<()> {
         // skip the wait if `js0` is already connected
         if let Ok(_) = File::open("/dev/input/js0") {
@@ -208,7 +204,7 @@ impl Gamepad {
             {
                 "axes": self.axes,
                 "buttons": buttons_json,
-                "connected": self.is_connected(),
+                "connected": self.connected,
                 "id": self.name,
                 "index": 0,
                 "mapping": "",
