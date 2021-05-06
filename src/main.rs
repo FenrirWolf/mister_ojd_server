@@ -40,13 +40,14 @@ ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
 fn main() {
     loop {
         println!("Waiting for Open Joystick Display");
+
         let mut socket = match connect_to_ojd() {
             Ok(stream) => {
                 println!("Connected to Open Joystick Display");
                 stream
             },
             Err(e) => {
-                println!("{}", e);
+                println!("Unable to connect to Open Joystick Display: {}", e);
                 continue
             }
         };
@@ -57,7 +58,7 @@ fn main() {
         while let Ok(_) = socket.read(&mut recv_buf) {
             if !gamepad.is_connected() {
                 if let Err(e) = gamepad.connect() {
-                    println!("{}", e);
+                    println!("Unable to detect gamepad status: {}", e);
                 } else {
                     println!("Gamepad connected");
                 }
@@ -69,7 +70,7 @@ fn main() {
 
             let payload = gamepad.build_json_payload();
             if let Err(e) = write!(&mut socket, "{}#{}", payload.len(), payload) {
-                println!("{}", e);
+                println!("Unable to send payload to Open Joystick Display: {}: Disconnecting", e);
             }
         }
 
