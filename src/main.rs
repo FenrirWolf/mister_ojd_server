@@ -1,4 +1,6 @@
 use anyhow::{Context, Result};
+use inotify::{Inotify, EventMask, WatchMask};
+use nix::{ioctl_read, ioctl_read_buf};
 use serde_json::{json, Value};
 
 use std::{
@@ -30,9 +32,9 @@ const JSIOCGBUTTONS: u8 = 0x12;
 const JSIOCGNAME: u8 = 0x13;
 
 // create the ioctl calls that we need to get gamepad metadata
-nix::ioctl_read!(get_num_axes, JSIOCG_MAGIC, JSIOCGAXES, u8);
-nix::ioctl_read!(get_num_buttons, JSIOCG_MAGIC, JSIOCGBUTTONS, u8);
-nix::ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
+ioctl_read!(get_num_axes, JSIOCG_MAGIC, JSIOCGAXES, u8);
+ioctl_read!(get_num_buttons, JSIOCG_MAGIC, JSIOCGBUTTONS, u8);
+ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
 
 fn main() -> Result<()> {
     let mut stream = connect_to_ojd()?;
@@ -68,6 +70,8 @@ fn connect_to_ojd() -> Result<TcpStream> {
 }
 
 fn get_gamepad_info() -> Result<Gamepad> {
+    wait_for_gamepad_connection()?;
+
     let mut num_axes: u8 = 0;
     let mut num_buttons: u8 = 0;
     let mut gamepad_name = [0u8; 128];
@@ -96,6 +100,32 @@ fn get_gamepad_info() -> Result<Gamepad> {
         axes: vec![0f64; num_axes as usize],
     })
 }
+
+fn wait_for_gamepad_connection() -> Result<()> {
+    // skip the wait if `js0` is already connected
+    if let Ok(_) = File::open("/dev/input/js0") {
+        return Ok(());
+    }
+
+    let mut inotify = Inotify::init()?;
+    inotify.add_watch("/dev/input", WatchMask::CREATE)?;
+
+    let mut buf = [0; 1024];
+    loop {
+        let mut events = inotify.read_events_blocking(&mut buf)?;
+
+        if let Some(event) = events.next() {
+            if let Some(name) = event.name {
+                if name == "js0" && event.mask == EventMask::CREATE {
+                    break
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
 
 fn read_gamepad_events(gamepad: &mut Gamepad) -> Result<()> {
     let mut file = File::open("/dev/input/js0").context("No gamepad detected")?;
