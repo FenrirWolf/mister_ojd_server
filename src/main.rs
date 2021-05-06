@@ -147,13 +147,13 @@ impl Gamepad {
         inotify.add_watch("/dev/input", WatchMask::CREATE)?;
 
         let mut buf = [0; 1024];
-        loop {
-            let mut events = inotify.read_events_blocking(&mut buf)?;
+        'outer: loop {
+            let events = inotify.read_events_blocking(&mut buf)?;
 
-            if let Some(event) = events.next() {
+            for event in events {
                 if let Some(name) = event.name {
                     if name == "js0" && event.mask == EventMask::CREATE {
-                        break
+                        break 'outer
                     }
                 }
             }
