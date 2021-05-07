@@ -4,15 +4,17 @@ This is a server that allows [Open Joystick Display](http://kernelzechs.com/open
 The server is currently functioning, but is not yet in a fully completed state.
 
 ## Building
-This program uses the `inotify` API to await controller hotswap events. As of this writing, the MiSTer linux stack still uses `glibc v2.23`. This means that you would specifically need a `armv7-linux-gnueabihf-gcc-6` cross compiler to use the `gnueabihf` target, as newer GCC versions will result in the binary producing a glibc incompatibility error at runtime.
+The easiest way to build this program is by using [cargo-cross](https://github.com/rust-embedded/cross). Install it with `cargo` by running
 
-Instead of tracking down an old GCC cross compiler, it's recommended to use a `musleabihf` target to bypass glibc compatibility issues entirely. Normally using a musl toolchain would also allow you to link with `rust-lld`, but the `lld` linker is currently unable to link this program due to a bug involving unknown relocations. So you'll have to procure an `armv7-linux-gnueabihf-gcc` toolchain anyway to use its linker, but any GCC version should suffice.
+```
+cargo install cross
+```
 
-Once you have done this, change the `linker` filed under `.cargo/config` to the name of the specific ARM GCC binary on your system.
+You need to have `docker` available and running on your system for `cross` to work. follow the instructions on the linked page for more information about that. Once everything is working, you can build the program with `cross`:
 
-You will then be able to build and link the project via Cargo:
-
-`cargo build --release --target armv7-unknown-linux-musleabihf`
+```
+cross build --release --target armv7-unknown-linux-gnueabihf
+```
 
 ## Preparation
 The server communicates with Open Joystick Display via TCP port `56709`. To allow your MiSTer to receive connections over this port, add the following rule to `/media/fat/linux/iptables.up.rules`:
