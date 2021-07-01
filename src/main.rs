@@ -70,13 +70,12 @@ fn main() {
 
             let payload = gamepad.build_json_payload();
             if let Err(e) = write!(&mut socket, "{}#{}", payload.len(), payload) {
-                println!("Unable to send payload to Open Joystick Display: {}: Disconnecting", e);
+                println!("Unable to send payload to Open Joystick Display: {}", e);
             }
         }
 
         println!("Disconnected from Open Joystick Display");
     }
-
 }
 
 fn connect_to_ojd() -> Result<TcpStream> {
@@ -143,19 +142,17 @@ impl Gamepad {
         inotify.add_watch("/dev/input", WatchMask::CREATE)?;
 
         let mut buf = [0; 1024];
-        'outer: loop {
+        loop {
             let events = inotify.read_events_blocking(&mut buf)?;
 
             for event in events {
                 if let Some(name) = event.name {
                     if name == "js0" && event.mask == EventMask::CREATE {
-                        break 'outer
+                        return Ok(());
                     }
                 }
             }
         }
-
-        Ok(())
     }
 
     fn update_state(&mut self) -> Result<()> {
@@ -165,7 +162,6 @@ impl Gamepad {
                 self.connected = false;
                 return Err(anyhow!(e));
             }
-
         };
 
         let mut raw = [0u8; 8];
