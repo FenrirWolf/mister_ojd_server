@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+daemonize = "0.4"
 inotify = "0.9"
 local_ipaddress = "0.1"
 nix = "0.20"

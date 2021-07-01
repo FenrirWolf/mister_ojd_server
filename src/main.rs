@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use daemonize::Daemonize;
 use inotify::{Inotify, EventMask, WatchMask};
 use nix::{ioctl_read, ioctl_read_buf};
 use serde_json::{json, Value};
@@ -38,6 +39,10 @@ ioctl_read!(get_num_buttons, JSIOCG_MAGIC, JSIOCGBUTTONS, u8);
 ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
 
 fn main() {
+    if let Err(e) = daemonize_me() {
+        panic!("Unable to daemonize application: {}", e);
+    }
+
     loop {
         println!("Waiting for Open Joystick Display");
 
@@ -76,6 +81,19 @@ fn main() {
 
         println!("Disconnected from Open Joystick Display");
     }
+}
+
+fn daemonize_me() -> Result<()> {
+    let stdout = File::create("/tmp/ojd_server.out")?;
+    let stderr = File::create("/tmp/ojd_server.err")?;
+
+    let daemon = Daemonize::new()
+        .stdout(stdout)
+        .stderr(stderr);
+
+    let _ = daemon.start()?;
+
+    Ok(())
 }
 
 fn connect_to_ojd() -> Result<TcpStream> {
