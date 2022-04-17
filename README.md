@@ -36,3 +36,11 @@ A: That happens because the server returns raw button data exactly as received f
 Q: Will you release an updater script for the server?
 
 A: Probably not. The program is pretty simple and will rarely need to be updated once installed, if ever at all.
+
+## License
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
