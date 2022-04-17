@@ -1,5 +1,5 @@
 # mister_ojd_server
-This a server that allows [Open Joystick Display](http://kernelzechs.com/open-joystick-display/) to receive usb controller inputs from a [MiSTer FPGA](https://github.com/mister-devel/main_mister/wiki) via network connection.
+This a server that allows [Open Joystick Display](https://proxy.vulpes.one/gemini/kernelzechs.com/ojd/downloads/) to receive usb controller inputs from a [MiSTer FPGA](https://github.com/mister-devel/main_mister/wiki) via network connection.
 
 # Installing
 Download the release file and unzip it. You'll find two folders, one containing the server binary and another containing a modified `iptables.up.rules` file along with a `user-startup.sh` script. Copy both folders to the root of your mister's sd card. Next time you power on your MiSTer, the server will automatically start and wait for a connection from Open Joystic Display.
