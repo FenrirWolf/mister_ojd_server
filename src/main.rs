@@ -14,7 +14,7 @@ use std::{
 
 struct Gamepad {
     name: String,
-    buttons: Vec<bool>,
+    buttons: Vec<f64>,
     axes: Vec<f64>,
     connected: bool,
 }
@@ -143,8 +143,8 @@ impl Gamepad {
             .into();
         
         self.name = parsed_name;
-        self.buttons.resize(num_buttons as usize, false);
-        self.axes.resize(num_axes as usize, 0 as f64);
+        self.buttons.resize(num_buttons as usize, 0.);
+        self.axes.resize(num_axes as usize, 0.);
         self.connected = true;
 
         Ok(())
@@ -191,7 +191,7 @@ impl Gamepad {
 
             }
             let event: js_event = unsafe { std::mem::transmute(raw) };
-            *button = event.value != 0;
+            *button = event.value as f64 / i16::MAX as f64;
         }
 
         for axis in &mut self.axes {
@@ -209,8 +209,8 @@ impl Gamepad {
 
     fn build_json_payload(&mut self) -> String {
         let buttons_json: Vec<Value> = self.buttons.iter()
-            .map(|&val| {
-                json!({"pressed": val, "value": if val {1} else {0}})
+            .map(|&value| {
+                json!({"pressed": value !=0f64, "value": value})
             })
             .collect();
 
