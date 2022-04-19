@@ -133,9 +133,11 @@ impl Gamepad {
             get_gamepad_name(fd, &mut gamepad_name).context("Couldn't get gamepad name")?;
         }
 
-        let name_len = gamepad_name.iter()
+        let name_len = gamepad_name
+            .iter()
             .position(|&ch| ch == b'\0')
-            .context("Gamepad name isn't nul-terminated somehow???")? + 1;
+            .context("Gamepad name isn't nul-terminated somehow???")?
+            + 1;
 
         let parsed_name: String = CStr::from_bytes_with_nul(&gamepad_name[..name_len])
             .context("Failed to parse gamepad name")?
@@ -187,8 +189,7 @@ impl Gamepad {
         for button in &mut self.buttons {
             if let Err(e) = device.read(&mut raw) {
                 self.connected = false;
-                return Err(anyhow!(e))
-
+                return Err(anyhow!(e));
             }
             let event: js_event = unsafe { std::mem::transmute(raw) };
             *button = event.value as f64 / i16::MAX as f64;
@@ -197,8 +198,7 @@ impl Gamepad {
         for axis in &mut self.axes {
             if let Err(e) = device.read(&mut raw) {
                 self.connected = false;
-                return Err(anyhow!(e))
-
+                return Err(anyhow!(e));
             }
             let event: js_event = unsafe { std::mem::transmute(raw) };
             *axis = event.value as f64 / i16::MAX as f64;
@@ -208,10 +208,10 @@ impl Gamepad {
     }
 
     fn build_json_payload(&mut self) -> String {
-        let buttons_json: Vec<Value> = self.buttons.iter()
-            .map(|&value| {
-                json!({"pressed": value !=0f64, "value": value})
-            })
+        let buttons_json: Vec<Value> = self
+            .buttons
+            .iter()
+            .map(|&value| json!({"pressed": value !=0f64, "value": value}))
             .collect();
 
         let payload = json!(
