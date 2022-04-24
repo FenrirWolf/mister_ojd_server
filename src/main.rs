@@ -74,7 +74,7 @@ fn main() {
             }
 
             let payload = gamepad.build_json_payload();
-            if let Err(e) = write!(&mut socket, "{}#{}", payload.len(), payload) {
+            if let Err(e) = socket.write(&payload) {
                 println!("Unable to send payload to Open Joystick Display: {}", e);
             }
         }
@@ -207,14 +207,14 @@ impl Gamepad {
         Ok(())
     }
 
-    fn build_json_payload(&mut self) -> String {
+    fn build_json_payload(&mut self) -> Vec<u8> {
         let buttons_json: Vec<Value> = self
             .buttons
             .iter()
             .map(|&value| json!({"pressed": value !=0f64, "value": value}))
             .collect();
 
-        let payload = json!(
+        let json = json!(
             {
                 "axes": self.axes,
                 "buttons": buttons_json,
@@ -224,8 +224,12 @@ impl Gamepad {
                 "mapping": "",
                 "timestamp": 0,
             }
-        );
+        )
+        .to_string();
 
-        payload.to_string()
+        let mut payload = Vec::new();
+        let _ = write!(&mut payload, "{}#{}", json.len(), json);
+
+        payload
     }
 }
