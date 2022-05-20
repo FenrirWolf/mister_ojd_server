@@ -76,6 +76,7 @@ fn main() {
             let payload = gamepad.build_json_payload();
             if let Err(e) = socket.write(&payload) {
                 println!("Unable to send payload to Open Joystick Display: {}", e);
+                break;
             }
         }
 
