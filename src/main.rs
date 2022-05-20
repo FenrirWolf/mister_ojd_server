@@ -1,15 +1,15 @@
 use anyhow::{anyhow, Context, Result};
 use daemonize::Daemonize;
-use inotify::{Inotify, EventMask, WatchMask};
+use inotify::{EventMask, Inotify, WatchMask};
 use nix::{ioctl_read, ioctl_read_buf};
 use serde_json::{json, Value};
 
 use std::{
     ffi::CStr,
     fs::File,
-    os::unix::io::AsRawFd,
     io::prelude::*,
     net::{TcpListener, TcpStream},
+    os::unix::io::AsRawFd,
 };
 
 struct Gamepad {
@@ -50,10 +50,10 @@ fn main() {
             Ok(stream) => {
                 println!("Connected to Open Joystick Display");
                 stream
-            },
+            }
             Err(e) => {
                 println!("Unable to connect to Open Joystick Display: {}", e);
-                continue
+                continue;
             }
         };
 
@@ -88,9 +88,7 @@ fn daemonize_me() -> Result<()> {
     let stdout = File::create("/tmp/ojd_server.out")?;
     let stderr = File::create("/tmp/ojd_server.err")?;
 
-    let daemon = Daemonize::new()
-        .stdout(stdout)
-        .stderr(stderr);
+    let daemon = Daemonize::new().stdout(stdout).stderr(stderr);
 
     let _ = daemon.start()?;
 
@@ -100,10 +98,12 @@ fn daemonize_me() -> Result<()> {
 fn connect_to_ojd() -> Result<TcpStream> {
     let mut ip_addr = local_ipaddress::get().context("Unable to retrieve local IP address")?;
     ip_addr.push_str(":56709");
-    
+
     let listener = TcpListener::bind(ip_addr).context("Unable to bind to local IP address")?;
 
-    let (stream, _) = listener.accept().context("Unable to accept TCP connection")?;
+    let (stream, _) = listener
+        .accept()
+        .context("Unable to accept TCP connection")?;
 
     Ok(stream)
 }
@@ -144,7 +144,7 @@ impl Gamepad {
             .context("Failed to parse gamepad name")?
             .to_string_lossy()
             .into();
-        
+
         self.name = parsed_name;
         self.buttons.resize(num_buttons as usize, 0.);
         self.axes.resize(num_axes as usize, 0.);
