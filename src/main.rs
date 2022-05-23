@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::Context;
 use daemonize::Daemonize;
 use inotify::{EventMask, Inotify, WatchMask};
 use nix::{ioctl_read, ioctl_read_buf};
@@ -12,6 +12,7 @@ use std::{
     os::unix::io::AsRawFd,
 };
 
+#[derive(Default)]
 struct Gamepad {
     name: String,
     buttons: Vec<f64>,
@@ -58,9 +59,9 @@ fn main() {
         };
 
         let mut gamepad = Gamepad::new();
-        let mut recv_buf = [0u8; 26];
+        let mut recv_buf = [0; 26];
 
-        while let Ok(_) = socket.read(&mut recv_buf) {
+        while socket.read(&mut recv_buf).is_ok() {
             if !gamepad.connected {
                 if let Err(e) = gamepad.connect() {
                     println!("Unable to detect gamepad status: {}", e);
@@ -69,7 +70,7 @@ fn main() {
                 }
             }
 
-            if let Err(_) = gamepad.update_state() {
+            if gamepad.update_state().is_err() {
                 println!("Gamepad disconnected");
             }
 
@@ -84,18 +85,16 @@ fn main() {
     }
 }
 
-fn daemonize_me() -> Result<()> {
+fn daemonize_me() -> anyhow::Result<()> {
     let stdout = File::create("/tmp/ojd_server.out")?;
     let stderr = File::create("/tmp/ojd_server.err")?;
 
     let daemon = Daemonize::new().stdout(stdout).stderr(stderr);
 
-    let _ = daemon.start()?;
-
-    Ok(())
+    Ok(daemon.start()?)
 }
 
-fn connect_to_ojd() -> Result<TcpStream> {
+fn connect_to_ojd() -> anyhow::Result<TcpStream> {
     let mut ip_addr = local_ipaddress::get().context("Unable to retrieve local IP address")?;
     ip_addr.push_str(":56709");
 
@@ -110,20 +109,15 @@ fn connect_to_ojd() -> Result<TcpStream> {
 
 impl Gamepad {
     fn new() -> Self {
-        Self {
-            name: String::from(""),
-            buttons: vec![],
-            axes: vec![],
-            connected: false,
-        }
+        Self::default()
     }
 
-    fn connect(&mut self) -> Result<()> {
+    fn connect(&mut self) -> anyhow::Result<()> {
         self.wait_for_connection()?;
 
         let mut num_axes: u8 = 0;
         let mut num_buttons: u8 = 0;
-        let mut gamepad_name = [0u8; 128];
+        let mut gamepad_name = [0; 128];
 
         let device = File::open("/dev/input/js0").context("No gamepad detected")?;
         let fd = device.as_raw_fd();
@@ -153,9 +147,9 @@ impl Gamepad {
         Ok(())
     }
 
-    fn wait_for_connection(&mut self) -> Result<()> {
+    fn wait_for_connection(&mut self) -> anyhow::Result<()> {
         // skip the wait if `js0` is already connected
-        if let Ok(_) = File::open("/dev/input/js0") {
+        if File::open("/dev/input/js0").is_ok() {
             return Ok(());
         }
 
@@ -176,21 +170,21 @@ impl Gamepad {
         }
     }
 
-    fn update_state(&mut self) -> Result<()> {
+    fn update_state(&mut self) -> anyhow::Result<()> {
         let mut device = match File::open("/dev/input/js0") {
             Ok(device) => device,
             Err(e) => {
                 self.connected = false;
-                return Err(anyhow!(e));
+                return Err(e.into());
             }
         };
 
-        let mut raw = [0u8; 8];
+        let mut raw = [0; 8];
 
         for button in &mut self.buttons {
             if let Err(e) = device.read(&mut raw) {
                 self.connected = false;
-                return Err(anyhow!(e));
+                return Err(e.into());
             }
             let event: js_event = unsafe { std::mem::transmute(raw) };
             *button = event.value as f64 / i16::MAX as f64;
@@ -199,7 +193,7 @@ impl Gamepad {
         for axis in &mut self.axes {
             if let Err(e) = device.read(&mut raw) {
                 self.connected = false;
-                return Err(anyhow!(e));
+                return Err(e.into());
             }
             let event: js_event = unsafe { std::mem::transmute(raw) };
             *axis = event.value as f64 / i16::MAX as f64;
@@ -229,6 +223,7 @@ impl Gamepad {
         .to_string();
 
         let mut payload = Vec::new();
+
         let _ = write!(&mut payload, "{}#{}", json.len(), json);
 
         payload
