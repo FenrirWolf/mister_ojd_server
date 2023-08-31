@@ -95,10 +95,8 @@ fn daemonize_me() -> anyhow::Result<()> {
 }
 
 fn connect_to_ojd() -> anyhow::Result<TcpStream> {
-    let mut ip_addr = local_ipaddress::get().context("Unable to retrieve local IP address")?;
-    ip_addr.push_str(":56709");
-
-    let listener = TcpListener::bind(ip_addr).context("Unable to bind to local IP address")?;
+    let listener =
+        TcpListener::bind("0.0.0.0:56709").context("Unable to bind to local IP address")?;
 
     let (stream, _) = listener
         .accept()

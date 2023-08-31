@@ -11,7 +11,6 @@ license = "MIT OR Apache-2.0"
 anyhow = "1.0"
 daemonize = "0.4"
 inotify = "0.9"
-local_ipaddress = "0.1"
 nix = "0.20"
 serde_json = "1.0"
 
