@@ -20,6 +20,8 @@ struct Gamepad {
     connected: bool,
 }
 
+// Linux joystick event struct defined in `/usr/include/linux/joystick.h`
+#[allow(non_camel_case_types)]
 #[repr(C)]
 struct js_event {
     time: u32,
@@ -28,13 +30,13 @@ struct js_event {
     number: u8,
 }
 
-// values taken from `/usr/include/linux/joystick.h`
+// Joystick IOCTL command values, also from `/usr/include/linux/joystick.h`
 const JSIOCG_MAGIC: u8 = b'j';
 const JSIOCGAXES: u8 = 0x11;
 const JSIOCGBUTTONS: u8 = 0x12;
 const JSIOCGNAME: u8 = 0x13;
 
-// create the ioctl calls that we need to get gamepad metadata
+// Generate rust-friendly wrappers for the linux joystick driver commands
 ioctl_read!(get_num_axes, JSIOCG_MAGIC, JSIOCGAXES, u8);
 ioctl_read!(get_num_buttons, JSIOCG_MAGIC, JSIOCGBUTTONS, u8);
 ioctl_read_buf!(get_gamepad_name, JSIOCG_MAGIC, JSIOCGNAME, u8);
@@ -59,6 +61,7 @@ fn main() {
         };
 
         let mut gamepad = Gamepad::new();
+
         let mut recv_buf = [0; 26];
 
         while socket.read(&mut recv_buf).is_ok() {
@@ -75,6 +78,7 @@ fn main() {
             }
 
             let payload = gamepad.build_json_payload();
+
             if let Err(e) = socket.write(&payload) {
                 println!("Unable to send payload to Open Joystick Display: {}", e);
                 break;
@@ -118,6 +122,7 @@ impl Gamepad {
         let mut gamepad_name = [0; 128];
 
         let device = File::open("/dev/input/js0").context("No gamepad detected")?;
+
         let fd = device.as_raw_fd();
 
         unsafe {
@@ -146,15 +151,17 @@ impl Gamepad {
     }
 
     fn wait_for_connection(&mut self) -> anyhow::Result<()> {
-        // skip the wait if `js0` is already connected
+        // skip the wait if a controller is already connected
         if File::open("/dev/input/js0").is_ok() {
             return Ok(());
         }
 
         let mut inotify = Inotify::init()?;
+
         inotify.add_watch("/dev/input", WatchMask::CREATE)?;
 
         let mut buf = [0; 1024];
+
         loop {
             let events = inotify.read_events_blocking(&mut buf)?;
 
@@ -184,7 +191,9 @@ impl Gamepad {
                 self.connected = false;
                 return Err(e.into());
             }
+
             let event: js_event = unsafe { std::mem::transmute(raw) };
+
             *button = event.value as f64 / i16::MAX as f64;
         }
 
@@ -193,7 +202,9 @@ impl Gamepad {
                 self.connected = false;
                 return Err(e.into());
             }
+
             let event: js_event = unsafe { std::mem::transmute(raw) };
+
             *axis = event.value as f64 / i16::MAX as f64;
         }
 
